@@ -84,6 +84,49 @@ Attach a policy to the role with the following permissions. For production, it's
 }
 ```
 
+## Infrastructure Setup (Terraform)
+
+If you wish to manage the infrastructure manually or from your local machine, follow these steps.
+
+### Prerequisites
+- [Terraform](https://developer.hashicorp.com/terraform/downloads) installed locally.
+- AWS CLI configured with appropriate credentials.
+
+### 1. Configuration
+Create a `terraform.tfvars` file inside the `terraform/` directory to provide the required variables:
+
+```hcl
+# terraform/terraform.tfvars
+aws_region     = "eu-west-1"
+domain_name    = "list.yourdomain.com"
+hosted_zone_id = "Z1234567890ABC"
+```
+
+### 2. Initialization
+Initialize the Terraform workspace to download the necessary providers:
+
+```bash
+cd terraform
+terraform init
+```
+
+### 3. Plan
+Generate and review an execution plan to see what resources will be created:
+
+```bash
+terraform plan
+```
+
+### 4. Apply
+Apply the changes to create the infrastructure:
+
+```bash
+terraform apply
+```
+
+### 5. Backend Configuration (Optional but Recommended)
+By default, this project uses a local state file. For production use, it is highly recommended to configure a remote backend (e.g., S3 and DynamoDB) in `terraform/main.tf` to enable state locking and collaboration.
+
 ## React Compiler
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
