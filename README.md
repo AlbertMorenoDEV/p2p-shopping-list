@@ -75,6 +75,7 @@ Attach a policy to the role with the following permissions. For production, it's
                 "route53:GetHostedZone",
                 "route53:ListResourceRecordSets",
                 "route53:ChangeResourceRecordSets",
+                "route53:GetChange",
                 "acm:*",
                 "iam:CreateServiceLinkedRole"
             ],
@@ -86,7 +87,10 @@ Attach a policy to the role with the following permissions. For production, it's
 
 ## Infrastructure Setup (Terraform)
 
-If you wish to manage the infrastructure manually or from your local machine, follow these steps.
+### ⚠️ CRITICAL: Remote Backend Requirement
+By default, this repository uses **local state**. This will NOT work reliably with GitHub Actions because the state file is lost after each run, causing Terraform to attempt to recreate existing resources (leading to errors like `BucketAlreadyExists` or `OriginAccessControlAlreadyExists`).
+
+**You MUST configure a remote backend** (like S3 and DynamoDB) in `terraform/main.tf` before running the GitHub Action deployment for the first time.
 
 ### Prerequisites
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) installed locally.
@@ -102,30 +106,42 @@ domain_name    = "list.yourdomain.com"
 hosted_zone_id = "Z1234567890ABC"
 ```
 
-### 2. Initialization
-Initialize the Terraform workspace to download the necessary providers:
+### 2. Configure Remote Backend
+Update `terraform/main.tf` to include a backend block:
+
+```hcl
+terraform {
+  backend "s3" {
+    bucket         = "your-terraform-state-bucket"
+    key            = "p2p-shopping-list/terraform.tfstate"
+    region         = "eu-west-1"
+    dynamodb_table = "terraform-state-lock"
+  }
+  # ... rest of terraform block
+}
+```
+
+### 3. Initialization
+Initialize the Terraform workspace to download the necessary providers and configure the backend:
 
 ```bash
 cd terraform
 terraform init
 ```
 
-### 3. Plan
-Generate and review an execution plan to see what resources will be created:
+### 4. Plan
+Generate and review an execution plan:
 
 ```bash
 terraform plan
 ```
 
-### 4. Apply
+### 5. Apply
 Apply the changes to create the infrastructure:
 
 ```bash
 terraform apply
 ```
-
-### 5. Backend Configuration (Optional but Recommended)
-By default, this project uses a local state file. For production use, it is highly recommended to configure a remote backend (e.g., S3 and DynamoDB) in `terraform/main.tf` to enable state locking and collaboration.
 
 ## React Compiler
 
