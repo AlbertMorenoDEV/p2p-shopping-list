@@ -161,6 +161,7 @@ function App() {
 
       <footer>
         <p className="room-info">Room ID: <code>{roomName}</code></p>
+        <p className="version-info">v{__APP_VERSION__}</p>
       </footer>
     </div>
   );

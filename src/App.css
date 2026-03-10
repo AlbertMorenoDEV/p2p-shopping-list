@@ -203,9 +203,10 @@ footer {
   text-align: center;
 }
 
-.room-info {
+.room-info, .version-info {
   font-size: 0.75rem;
   color: var(--text-muted);
+  margin: 0.25rem 0;
 }
 
 code {
