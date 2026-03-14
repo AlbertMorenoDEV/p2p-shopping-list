@@ -5,8 +5,8 @@ on:
     branches: [ main ]
 
 permissions:
-  id-token: write # Required for OIDC
-  contents: read
+  id-token: write # Required for AWS OIDC
+  contents: write # Required for GitHub Pages deploy
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION || 'eu-west-1' }}
@@ -16,9 +16,6 @@ jobs:
   terraform:
     name: Infrastructure (Terraform)
     runs-on: ubuntu-latest
-    outputs:
-      s3_bucket_name: ${{ steps.apply.outputs.s3_bucket_name }}
-      cf_id: ${{ steps.apply.outputs.cf_id }}
     
     steps:
       - name: Checkout Code
@@ -38,20 +35,15 @@ jobs:
         working-directory: terraform
 
       - name: Terraform Apply
-        id: apply
         run: |
           terraform apply -auto-approve \
             -var="hosted_zone_id=${{ secrets.HOSTED_ZONE_ID }}" \
             -var="domain_name=${{ env.DOMAIN_NAME }}" \
             -var="aws_region=${{ env.AWS_REGION }}"
-          
-          # Map outputs to GH Action outputs
-          echo "s3_bucket_name=$(terraform output -raw s3_bucket_name)" >> $GITHUB_OUTPUT
-          echo "cf_id=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
         working-directory: terraform
 
   deploy:
-    name: Build & Publish
+    name: Build & Publish (GitHub Pages)
     needs: terraform
     runs-on: ubuntu-latest
     
@@ -70,18 +62,11 @@ jobs:
       - name: Build App
         run: npm run build
 
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Add CNAME for Custom Domain
+        run: echo "${{ env.DOMAIN_NAME }}" > ./dist/CNAME
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Upload to S3
-        run: |
-          aws s3 sync ./dist s3://${{ needs.terraform.outputs.s3_bucket_name }} --delete
-
-      - name: Invalidate CloudFront Cache
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ needs.terraform.outputs.cf_id }} \
-            --paths "/*"
+          folder: dist
+          branch: gh-pages
