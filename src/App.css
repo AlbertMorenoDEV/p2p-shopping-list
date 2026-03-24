@@ -138,6 +138,14 @@ input:focus {
   color: var(--text-muted);
 }
 
+.online-icon {
+  color: var(--success);
+}
+
+.offline-icon {
+  color: var(--danger);
+}
+
 .status-dot {
   width: 8px;
   height: 8px;

@@ -1,9 +1,9 @@
 /* global __APP_VERSION__ */
 import React, { useState, useEffect } from 'react';
 import * as Y from 'yjs';
-import { WebrtcProvider } from 'y-webrtc';
+import { WebsocketProvider } from 'y-websocket';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import { Plus, Trash2, Check, Square, Share2, ShoppingCart } from 'lucide-react';
+import { Plus, Trash2, Check, Square, Share2, ShoppingCart, Loader2, Wifi, WifiOff } from 'lucide-react';
 import './App.css';
 
 // Initialize Yjs Document
@@ -13,72 +13,45 @@ const yList = ydoc.getArray('shopping-list');
 function App() {
   const [items, setItems] = useState([]);
   const [inputValue, setInputValue] = useState('');
-  
-  // 1 & 3. Ensure the room name is correctly derived from the URL on every render to prevent mismatch.
-  const urlParams = new URLSearchParams(window.location.search);
-  let roomName = urlParams.get('room');
-  if (!roomName) {
-    roomName = `p2p-shop-${crypto.randomUUID()}`;
-    urlParams.set('room', roomName);
-    window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
-  }
-  console.log('Active Room Name:', roomName);
-
+  const [roomName] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    let room = urlParams.get('room');
+    if (!room) {
+      room = `shop-${crypto.randomUUID().slice(0, 8)}`;
+      urlParams.set('room', room);
+      window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
+    }
+    return room;
+  });
   const [isSynced, setIsSynced] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [peers, setPeers] = useState(0);
-
-  // 4. Add a useEffect to log when the local items state changes.
-  useEffect(() => {
-    console.log('Items state changed:', items);
-  }, [items]);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     const room = roomName;
+    console.log('Active Room:', room);
 
-    // 2. Setup Persistence (IndexedDB)
+    // 1. Setup Persistence (IndexedDB)
     const persistence = new IndexeddbPersistence(room, ydoc);
     persistence.on('synced', () => {
       console.log('Local data synced from IndexedDB');
       setIsSynced(true);
     });
 
-    // 3. Setup Networking (WebRTC)
-    const provider = new WebrtcProvider(room, ydoc, {
-      signaling: [
-        'wss://y-webrtc-signaling-eu.herokuapp.com',
-        'wss://y-webrtc-signaling-us.herokuapp.com',
-        'wss://signaling.yjs.dev'
-      ],
-      peerOpts: {
-        config: {
-          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        }
-      }
+    // 2. Setup Networking (WebSocket - More reliable than public WebRTC signaling)
+    // Using a public y-websocket server (Note: in production, you'd host your own)
+    const provider = new WebsocketProvider('wss://demos.yjs.dev', room, ydoc);
+    
+    provider.on('status', (event) => {
+      console.log('WS Connection Status:', event.status);
+      setIsConnected(event.status === 'connected');
     });
 
-    // 2. Add event listeners for 'synced', 'connection', and 'peer-add/peer-remove'
-    provider.on('synced', (event) => {
-      console.log('WebRTC Provider: synced', event);
+    provider.on('sync', (isSynced) => {
+      console.log('WS Sync Status:', isSynced);
     });
 
-    provider.on('connection', (event) => {
-      console.log('WebRTC Provider: connection', event);
-    });
-
-    provider.on('peer-add', (event) => {
-      console.log('WebRTC Provider: peer-add', event);
-    });
-
-    provider.on('peer-remove', (event) => {
-      console.log('WebRTC Provider: peer-remove', event);
-    });
-
-    provider.on('peers', (event) => {
-      setPeers(event.webrtcPeers.length);
-    });
-
-    // 4. Bind Yjs data to React State
+    // 3. Bind Yjs data to React State
     const updateHandler = () => {
       setItems(yList.toArray());
     };
@@ -151,12 +124,16 @@ function App() {
       <main>
         <div className="status-bar">
           <div className="status-item">
-            <span className={`status-dot ${peers > 0 ? 'online' : ''}`}></span>
-            <span>{peers} {peers === 1 ? 'peer' : 'peers'} connected</span>
+            {isConnected ? (
+              <Wifi size={14} className="online-icon" />
+            ) : (
+              <WifiOff size={14} className="offline-icon" />
+            )}
+            <span>{isConnected ? 'Connected' : 'Offline (Local Only)'}</span>
           </div>
           <div className="status-item">
             <span className={`status-dot ${isSynced ? 'online' : ''}`}></span>
-            <span>{isSynced ? 'Synced' : 'Syncing...'}</span>
+            <span>{isSynced ? 'Saved' : 'Saving...'}</span>
           </div>
         </div>
 
