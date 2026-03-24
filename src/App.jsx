@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+/* global __APP_VERSION__ */
+import React, { useState, useEffect } from 'react';
 import * as Y from 'yjs';
 import { WebrtcProvider } from 'y-webrtc';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import { Plus, Trash2, Check, Square, Share2, ShoppingCart, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Check, Square, Share2, ShoppingCart } from 'lucide-react';
 import './App.css';
 
 // Initialize Yjs Document
@@ -12,12 +13,7 @@ const yList = ydoc.getArray('shopping-list');
 function App() {
   const [items, setItems] = useState([]);
   const [inputValue, setInputValue] = useState('');
-  const [roomName, setRoomName] = useState('');
-  const [isSynced, setIsSynced] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
-
-  useEffect(() => {
-    // 1. Handle Room ID from URL
+  const [roomName] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     let room = urlParams.get('room');
     if (!room) {
@@ -25,7 +21,14 @@ function App() {
       urlParams.set('room', room);
       window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
     }
-    setRoomName(room);
+    return room;
+  });
+  const [isSynced, setIsSynced] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [peers, setPeers] = useState(0);
+
+  useEffect(() => {
+    const room = roomName;
 
     // 2. Setup Persistence (IndexedDB)
     const persistence = new IndexeddbPersistence(room, ydoc);
@@ -36,7 +39,20 @@ function App() {
 
     // 3. Setup Networking (WebRTC)
     const provider = new WebrtcProvider(room, ydoc, {
-      signaling: ['wss://signaling.yjs.dev']
+      signaling: [
+        'wss://y-webrtc-signaling-eu.herokuapp.com',
+        'wss://y-webrtc-signaling-us.herokuapp.com',
+        'wss://signaling.yjs.dev'
+      ],
+      peerOpts: {
+        config: {
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        }
+      }
+    });
+
+    provider.on('peers', (event) => {
+      setPeers(event.webrtcPeers.length);
     });
 
     // 4. Bind Yjs data to React State
@@ -52,7 +68,7 @@ function App() {
       provider.destroy();
       persistence.destroy();
     };
-  }, []);
+  }, [roomName]);
 
   const addItem = (e) => {
     e.preventDefault();
@@ -110,6 +126,17 @@ function App() {
       </header>
 
       <main>
+        <div className="status-bar">
+          <div className="status-item">
+            <span className={`status-dot ${peers > 0 ? 'online' : ''}`}></span>
+            <span>{peers} {peers === 1 ? 'peer' : 'peers'} connected</span>
+          </div>
+          <div className="status-item">
+            <span className={`status-dot ${isSynced ? 'online' : ''}`}></span>
+            <span>{isSynced ? 'Synced' : 'Syncing...'}</span>
+          </div>
+        </div>
+
         <form onSubmit={addItem} className="input-group">
           <input
             type="text"
@@ -122,13 +149,6 @@ function App() {
             <Plus size={24} />
           </button>
         </form>
-
-        {!isSynced && (
-          <div className="sync-status">
-            <Loader2 className="spin" size={16} />
-            <span>Syncing local storage...</span>
-          </div>
-        )}
 
         <div className="list-section">
           {items.length === 0 ? (
