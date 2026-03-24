@@ -13,19 +13,25 @@ const yList = ydoc.getArray('shopping-list');
 function App() {
   const [items, setItems] = useState([]);
   const [inputValue, setInputValue] = useState('');
-  const [roomName] = useState(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    let room = urlParams.get('room');
-    if (!room) {
-      room = `p2p-shop-${crypto.randomUUID()}`;
-      urlParams.set('room', room);
-      window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
-    }
-    return room;
-  });
+  
+  // 1 & 3. Ensure the room name is correctly derived from the URL on every render to prevent mismatch.
+  const urlParams = new URLSearchParams(window.location.search);
+  let roomName = urlParams.get('room');
+  if (!roomName) {
+    roomName = `p2p-shop-${crypto.randomUUID()}`;
+    urlParams.set('room', roomName);
+    window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
+  }
+  console.log('Active Room Name:', roomName);
+
   const [isSynced, setIsSynced] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [peers, setPeers] = useState(0);
+
+  // 4. Add a useEffect to log when the local items state changes.
+  useEffect(() => {
+    console.log('Items state changed:', items);
+  }, [items]);
 
   useEffect(() => {
     const room = roomName;
@@ -49,6 +55,23 @@ function App() {
           iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         }
       }
+    });
+
+    // 2. Add event listeners for 'synced', 'connection', and 'peer-add/peer-remove'
+    provider.on('synced', (event) => {
+      console.log('WebRTC Provider: synced', event);
+    });
+
+    provider.on('connection', (event) => {
+      console.log('WebRTC Provider: connection', event);
+    });
+
+    provider.on('peer-add', (event) => {
+      console.log('WebRTC Provider: peer-add', event);
+    });
+
+    provider.on('peer-remove', (event) => {
+      console.log('WebRTC Provider: peer-remove', event);
     });
 
     provider.on('peers', (event) => {
