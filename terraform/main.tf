@@ -2,7 +2,7 @@ terraform {
   backend "s3" {
     bucket         = "albertmoreno-tf-state"
     key            = "p2p-shopping-list/terraform.tfstate"
-    region         = "us-east-1"
+    region         = "eu-central-1"
   }
 
   required_providers {
