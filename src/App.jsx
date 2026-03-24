@@ -1,9 +1,9 @@
 /* global __APP_VERSION__ */
 import React, { useState, useEffect } from 'react';
 import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
+import { WebrtcProvider } from 'y-webrtc';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import { Plus, Trash2, Check, Square, Share2, ShoppingCart, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { Plus, Trash2, Check, Square, Share2, ShoppingCart, Share, Users } from 'lucide-react';
 import './App.css';
 
 // Initialize Yjs Document
@@ -25,7 +25,7 @@ function App() {
   });
   const [isSynced, setIsSynced] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const [peers, setPeers] = useState(0);
 
   useEffect(() => {
     const room = roomName;
@@ -38,17 +38,27 @@ function App() {
       setIsSynced(true);
     });
 
-    // 2. Setup Networking (WebSocket - More reliable than public WebRTC signaling)
-    // Using a public y-websocket server (Note: in production, you'd host your own)
-    const provider = new WebsocketProvider('wss://demos.yjs.dev', room, ydoc);
-    
-    provider.on('status', (event) => {
-      console.log('WS Connection Status:', event.status);
-      setIsConnected(event.status === 'connected');
+    // 2. Setup Networking (WebRTC)
+    // Using a more robust set of signaling servers and STUN/TURN
+    const provider = new WebrtcProvider(room, ydoc, {
+      signaling: [
+        'wss://y-webrtc-signaling.onrender.com',
+        'wss://y-webrtc-signaling.up.railway.app'
+      ],
+      peerOpts: {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
+          ]
+        }
+      }
     });
 
-    provider.on('sync', (isSynced) => {
-      console.log('WS Sync Status:', isSynced);
+    provider.on('peers', (event) => {
+      console.log('Peers changed:', event.webrtcPeers.length);
+      setPeers(event.webrtcPeers.length);
     });
 
     // 3. Bind Yjs data to React State
@@ -124,12 +134,8 @@ function App() {
       <main>
         <div className="status-bar">
           <div className="status-item">
-            {isConnected ? (
-              <Wifi size={14} className="online-icon" />
-            ) : (
-              <WifiOff size={14} className="offline-icon" />
-            )}
-            <span>{isConnected ? 'Connected' : 'Offline (Local Only)'}</span>
+            <Users size={14} className={peers > 0 ? 'online-icon' : ''} />
+            <span>{peers} {peers === 1 ? 'peer' : 'peers'} connected</span>
           </div>
           <div className="status-item">
             <span className={`status-dot ${isSynced ? 'online' : ''}`}></span>
