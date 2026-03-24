@@ -4,4 +4,5 @@ resource "aws_route53_record" "github_pages" {
   type    = "CNAME"
   ttl     = 300
   records = ["albertmorenodev.github.io"]
+  allow_overwrite = true
 }
