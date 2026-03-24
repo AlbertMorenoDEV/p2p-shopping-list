@@ -85,6 +85,7 @@ main {
   display: flex;
   gap: 0.75rem;
   margin-bottom: 1.5rem;
+  align-items: stretch;
 }
 
 input {
@@ -96,6 +97,7 @@ input {
   color: var(--text-main);
   font-size: 1rem;
   transition: border-color 0.2s;
+  line-height: 1.5;
 }
 
 input:focus {
@@ -107,12 +109,12 @@ input:focus {
   background: var(--primary);
   color: white;
   border: none;
-  width: 3rem;
-  height: 3rem;
+  padding: 0 1rem;
   border-radius: 0.5rem;
   display: grid;
   place-items: center;
   transition: transform 0.2s;
+  cursor: pointer;
 }
 
 .add-btn:hover {
