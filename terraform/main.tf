@@ -1,4 +1,10 @@
 terraform {
+  backend "s3" {
+    bucket         = "p2p-shopping-list-tf-state"
+    key            = "p2p-shopping-list/terraform.tfstate"
+    region         = "eu-west-1"
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
