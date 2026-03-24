@@ -17,7 +17,7 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     let room = urlParams.get('room');
     if (!room) {
-      room = `shop-${crypto.randomUUID().slice(0, 8)}`;
+      room = `shop-${Math.random().toString(36).slice(2, 7)}`;
       urlParams.set('room', room);
       window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
     }
