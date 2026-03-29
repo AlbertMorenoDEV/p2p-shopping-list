@@ -135,7 +135,7 @@ function App() {
         <div className="status-bar">
           <div className="status-item">
             <Users size={14} className={peers > 0 ? 'online-icon' : ''} />
-            <span>{peers} {peers === 1 ? 'peer' : 'peers'} connected</span>
+            <span>{peers + 1} {peers + 1 === 1 ? 'device' : 'devices'} in list</span>
           </div>
           <div className="status-item">
             <span className={`status-dot ${isSynced ? 'online' : ''}`}></span>
