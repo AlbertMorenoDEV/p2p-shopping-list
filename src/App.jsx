@@ -1,9 +1,9 @@
 /* global __APP_VERSION__ */
 import React, { useState, useEffect } from 'react';
 import * as Y from 'yjs';
-import { WebrtcProvider } from 'y-webrtc';
+import { WebsocketProvider } from 'y-websocket';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import { Plus, Trash2, Check, Square, Share2, ShoppingCart, Share, Users } from 'lucide-react';
+import { Plus, Trash2, Check, Square, Share2, ShoppingCart, Wifi, WifiOff, Users } from 'lucide-react';
 import './App.css';
 
 // Initialize Yjs Document
@@ -25,40 +25,28 @@ function App() {
   });
   const [isSynced, setIsSynced] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [peers, setPeers] = useState(0);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     const room = roomName;
     console.log('Active Room:', room);
 
     // 1. Setup Persistence (IndexedDB)
+    // This ensures data is saved locally and survives browser restarts/offline
     const persistence = new IndexeddbPersistence(room, ydoc);
     persistence.on('synced', () => {
       console.log('Local data synced from IndexedDB');
       setIsSynced(true);
     });
 
-    // 2. Setup Networking (WebRTC)
-    // Using a more robust set of signaling servers and STUN/TURN
-    const provider = new WebrtcProvider(room, ydoc, {
-      signaling: [
-        'wss://y-webrtc-signaling.onrender.com',
-        'wss://y-webrtc-signaling.up.railway.app'
-      ],
-      peerOpts: {
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' }
-          ]
-        }
-      }
-    });
-
-    provider.on('peers', (event) => {
-      console.log('Peers changed:', event.webrtcPeers.length);
-      setPeers(event.webrtcPeers.length);
+    // 2. Setup Networking (WebSocket)
+    // Using a centralized server allows asynchronous syncing (one device can be offline)
+    // Note: demos.yjs.dev is for testing. For private data, consider a self-hosted server.
+    const provider = new WebsocketProvider('wss://demos.yjs.dev', room, ydoc);
+    
+    provider.on('status', (event) => {
+      console.log('WS Connection Status:', event.status);
+      setIsConnected(event.status === 'connected');
     });
 
     // 3. Bind Yjs data to React State
@@ -134,12 +122,16 @@ function App() {
       <main>
         <div className="status-bar">
           <div className="status-item">
-            <Users size={14} className={peers > 0 ? 'online-icon' : ''} />
-            <span>{peers + 1} {peers + 1 === 1 ? 'device' : 'devices'} in list</span>
+            {isConnected ? (
+              <Wifi size={14} className="online-icon" />
+            ) : (
+              <WifiOff size={14} className="offline-icon" />
+            )}
+            <span>{isConnected ? 'Syncing via Server' : 'Offline (Local Only)'}</span>
           </div>
           <div className="status-item">
             <span className={`status-dot ${isSynced ? 'online' : ''}`}></span>
-            <span>{isSynced ? 'Saved' : 'Saving...'}</span>
+            <span>{isSynced ? 'Saved Locally' : 'Saving...'}</span>
           </div>
         </div>
 
