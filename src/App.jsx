@@ -19,6 +19,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useShoppingList } from './hooks/useShoppingList';
+import { ItemAutocompleteInput } from './components/ItemAutocompleteInput';
 import {
   resolveInitialRoom,
   generateRoomId,
@@ -67,6 +68,7 @@ function ShoppingListView({
     usingPublicDemo,
     addItem,
     toggleItem,
+    reopenItem,
     updateItemText,
     deleteItem,
     clearCompleted,
@@ -75,7 +77,6 @@ function ShoppingListView({
     getShareUrl,
   } = useShoppingList(roomName);
 
-  const [inputValue, setInputValue] = useState('');
   const [shareState, setShareState] = useState('idle'); // 'idle' | 'copied' | 'error'
   const [roomCodeCopied, setRoomCodeCopied] = useState(false);
   const [showRoomsPanel, setShowRoomsPanel] = useState(false);
@@ -94,13 +95,6 @@ function ShoppingListView({
       clearTimeout(roomCodeTimeoutRef.current);
     };
   }, []);
-
-  const handleAddItem = (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
-    addItem(inputValue);
-    setInputValue('');
-  };
 
   const startEditing = (item) => {
     setEditingId(item.id);
@@ -333,27 +327,11 @@ function ShoppingListView({
           </div>
         </div>
 
-        <form onSubmit={handleAddItem} className="input-group">
-          <label htmlFor="new-item-input" className="sr-only">
-            Add an item to the shopping list
-          </label>
-          <input
-            id="new-item-input"
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Add an item..."
-            enterKeyHint="done"
-          />
-          <button
-            type="submit"
-            className="add-btn"
-            aria-label="Add item"
-            disabled={!inputValue.trim()}
-          >
-            <Plus size={22} aria-hidden="true" />
-          </button>
-        </form>
+        <ItemAutocompleteInput
+          items={items}
+          onAddItem={addItem}
+          onReopenItem={reopenItem}
+        />
 
         {(items.length > 0 || canUndo || canRedo) && (
           <div className="list-toolbar">

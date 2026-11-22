@@ -27,8 +27,8 @@ export default defineConfig({
         name: 'Shared Shopping List',
         short_name: 'Shared List',
         description: 'Offline-first shared shopping list synced in real time across devices.',
-        theme_color: '#6366f1',
-        background_color: '#0f172a',
+        theme_color: '#06080c',
+        background_color: '#06080c',
         display: 'standalone',
         start_url: '/',
         icons: [

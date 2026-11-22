@@ -10,6 +10,7 @@ import {
   readItems,
   addItem as crdtAddItem,
   toggleItem as crdtToggleItem,
+  reopenItem as crdtReopenItem,
   updateItemText as crdtUpdateItemText,
   deleteItem as crdtDeleteItem,
   clearCompletedItems as crdtClearCompleted,
@@ -200,6 +201,11 @@ export function useShoppingList(roomName) {
     return crdtToggleItem(ydocRef.current, id);
   }, []);
 
+  const reopenItem = useCallback((id) => {
+    if (!ydocRef.current) return false;
+    return crdtReopenItem(ydocRef.current, id);
+  }, []);
+
   const updateItemText = useCallback((id, text) => {
     if (!ydocRef.current) return false;
     return crdtUpdateItemText(ydocRef.current, id, text);
@@ -245,6 +251,7 @@ export function useShoppingList(roomName) {
     usingPublicDemo,
     addItem,
     toggleItem,
+    reopenItem,
     updateItemText,
     deleteItem,
     clearCompleted,

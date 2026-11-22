@@ -6,6 +6,7 @@ import {
   getItemsMap,
   addItem,
   toggleItem,
+  reopenItem,
   updateItemText,
   deleteItem,
   clearCompletedItems,
@@ -145,6 +146,41 @@ describe('CRDT shopping list operations', () => {
       'Bananas',
       'Olive Oil',
     ]);
+  });
+
+  it('reopens completed items in place without creating duplicates and supports undo', () => {
+    const doc = new Y.Doc();
+    const undoManager = new Y.UndoManager(getItemsMap(doc), {
+      trackedOrigins: new Set([USER_ORIGIN]),
+    });
+
+    const id = addItem(doc, 'Milk', 100);
+    // Reopening an already active item is a no-op.
+    expect(reopenItem(doc, id, 150)).toBe(false);
+    expect(reopenItem(doc, 'non-existent', 150)).toBe(false);
+
+    toggleItem(doc, id, 200);
+    expect(readItems(doc)[0].isCompleted).toBe(true);
+
+    undoManager.stopCapturing();
+    expect(reopenItem(doc, id, 300)).toBe(true);
+    // Idempotent second reopen returns false.
+    expect(reopenItem(doc, id, 350)).toBe(false);
+
+    const items = readItems(doc);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      id,
+      text: 'Milk',
+      isCompleted: false,
+      updatedAt: 300,
+    });
+
+    undoManager.undo();
+    expect(readItems(doc)[0].isCompleted).toBe(true);
+
+    undoManager.redo();
+    expect(readItems(doc)[0].isCompleted).toBe(false);
   });
 
   it('returns null for empty snapshot and false for malformed snapshot input', () => {

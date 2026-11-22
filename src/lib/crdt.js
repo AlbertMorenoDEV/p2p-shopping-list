@@ -143,6 +143,20 @@ export function toggleItem(ydoc, id, now = Date.now()) {
   return true;
 }
 
+export function reopenItem(ydoc, id, now = Date.now()) {
+  const itemsMap = getItemsMap(ydoc);
+  const itemMap = itemsMap.get(id);
+  if (!(itemMap instanceof Y.Map)) return false;
+  if (!itemMap.get('isCompleted')) return false;
+
+  ydoc.transact(() => {
+    itemMap.set('isCompleted', false);
+    itemMap.set('updatedAt', now);
+  }, USER_ORIGIN);
+
+  return true;
+}
+
 export function updateItemText(ydoc, id, rawText, now = Date.now()) {
   const text = rawText.trim();
   if (!text) return false;
