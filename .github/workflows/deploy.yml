@@ -61,9 +61,9 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && (
-        contains(join(github.event.commits.*.modified, ' '), 'terraform/') ||
-        contains(join(github.event.commits.*.added, ' '), 'terraform/') ||
-        contains(join(github.event.commits.*.removed, ' '), 'terraform/')
+        contains(toJSON(github.event.commits.*.modified), 'terraform/') ||
+        contains(toJSON(github.event.commits.*.added), 'terraform/') ||
+        contains(toJSON(github.event.commits.*.removed), 'terraform/')
       ))
     runs-on: ubuntu-latest
 
@@ -99,6 +99,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
