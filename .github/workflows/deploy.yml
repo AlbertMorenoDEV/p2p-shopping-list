@@ -3,20 +3,70 @@ name: Deploy Shared Shopping List
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   id-token: write # Required for AWS OIDC
   contents: write # Required for GitHub Pages deploy
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION || 'eu-west-1' }}
+  AWS_REGION: ${{ secrets.AWS_REGION || 'eu-central-1' }}
   DOMAIN_NAME: ${{ secrets.DOMAIN_NAME || 'list.albertmoreno.dev' }}
 
 jobs:
+  check:
+    name: Lint, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run Tests
+        run: npm test
+
+      - name: Build App
+        env:
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+          VITE_WS_ROOM_PREFIX: ${{ vars.VITE_WS_ROOM_PREFIX }}
+        run: npm run build
+
+      - name: Add CNAME for Custom Domain
+        run: echo "${{ env.DOMAIN_NAME }}" > ./dist/CNAME
+
+      - name: Upload Build Artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
   terraform:
     name: Infrastructure (Terraform)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && (
+        contains(join(github.event.commits.*.modified, ' '), 'terraform/') ||
+        contains(join(github.event.commits.*.added, ' '), 'terraform/') ||
+        contains(join(github.event.commits.*.removed, ' '), 'terraform/')
+      ))
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -43,27 +93,17 @@ jobs:
         working-directory: terraform
 
   deploy:
-    name: Build & Publish (GitHub Pages)
-    needs: terraform
+    name: Publish (GitHub Pages)
+    if: github.event_name != 'pull_request'
+    needs: check
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
         with:
-          node-version: 20
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Build App
-        run: npm run build
-
-      - name: Add CNAME for Custom Domain
-        run: echo "${{ env.DOMAIN_NAME }}" > ./dist/CNAME
+          name: dist
+          path: dist
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
